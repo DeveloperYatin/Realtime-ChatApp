@@ -1,0 +1,23 @@
+package com.dev.yatin.chatapp.data.local
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
+import com.dev.yatin.chatapp.data.local.entity.MessageEntity
+
+@Dao
+interface MessageDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertMessage(message: MessageEntity)
+
+    @Update
+    suspend fun updateMessage(message: MessageEntity)
+
+    @Query("DELETE FROM messages")
+    suspend fun clearAll()
+
+    @Query("SELECT * FROM messages WHERE status = :status")
+    suspend fun getMessagesByStatus(status: String): List<MessageEntity>
+} 

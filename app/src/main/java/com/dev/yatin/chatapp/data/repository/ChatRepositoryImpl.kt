@@ -1,0 +1,108 @@
+package com.dev.yatin.chatapp.data.repository
+
+import com.dev.yatin.chatapp.domain.model.Chat
+import com.dev.yatin.chatapp.domain.model.Message
+import com.dev.yatin.chatapp.domain.model.MessageStatus
+import com.dev.yatin.chatapp.domain.repository.ChatRepository
+import com.dev.yatin.chatapp.data.remote.SocketService
+import com.dev.yatin.chatapp.data.local.MessageDao
+import com.dev.yatin.chatapp.data.local.entity.MessageEntity
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import org.json.JSONObject
+
+class ChatRepositoryImpl(
+    private val socketService: SocketService,
+    private val messageDao: MessageDao
+) : ChatRepository {
+    private val chatsFlow = MutableStateFlow<List<Chat>>(emptyList())
+    private val messagesFlow = MutableStateFlow<Map<String, List<Message>>>(emptyMap())
+
+    init {
+        CoroutineScope(Dispatchers.IO).launch {
+            socketService.messageFlow.collect { json ->
+                val message = jsonToMessage(json)
+                messagesFlow.update { map ->
+                    val list = map[message.chatId].orEmpty() + message
+                    map + (message.chatId to list)
+                }
+                chatsFlow.update { list ->
+                    val chat = Chat(message.chatId, message.text, message.timestamp)
+                    val filtered = list.filterNot { it.id == chat.id }
+                    (filtered + chat).sortedByDescending { it.timestamp }
+                }
+            }
+        }
+    }
+
+    override fun getChats(): Flow<List<Chat>> = chatsFlow.asStateFlow()
+
+    override fun getMessages(chatId: String): Flow<List<Message>> =
+        messagesFlow.asStateFlow().map { it[chatId].orEmpty() }
+
+    override suspend fun sendMessage(message: Message): Boolean {
+        return try {
+            val json = messageToJson(message)
+            socketService.sendMessage(json)
+            true
+        } catch (_: Exception) {
+            // Simulate failure: queue message
+            messageDao.insertMessage(message.toEntity(MessageStatus.QUEUED))
+            false
+        }
+    }
+
+    override suspend fun retryQueuedMessages() {
+        val queued = messageDao.getMessagesByStatus(MessageStatus.QUEUED.name)
+        for (entity in queued) {
+            try {
+                socketService.sendMessage(messageToJson(entity.toDomain()))
+                messageDao.updateMessage(entity.copy(status = MessageStatus.SENT.name))
+            } catch (_: Exception) {
+                // Still failed, keep queued
+            }
+        }
+    }
+
+    // Helper mapping functions
+    private fun messageToJson(message: Message): JSONObject = JSONObject().apply {
+        put("id", message.id)
+        put("chatId", message.chatId)
+        put("text", message.text)
+        put("sender", message.sender)
+        put("timestamp", message.timestamp)
+    }
+
+    private fun jsonToMessage(json: JSONObject): Message = Message(
+        id = json.getString("id"),
+        chatId = json.getString("chatId"),
+        text = json.getString("text"),
+        sender = json.getString("sender"),
+        timestamp = json.getLong("timestamp"),
+        status = MessageStatus.SENT
+    )
+
+    private fun Message.toEntity(status: MessageStatus) = MessageEntity(
+        id = id,
+        chatId = chatId,
+        text = text,
+        sender = sender,
+        timestamp = timestamp,
+        status = status.name
+    )
+
+    private fun MessageEntity.toDomain() = Message(
+        id = id,
+        chatId = chatId,
+        text = text,
+        sender = sender,
+        timestamp = timestamp,
+        status = MessageStatus.valueOf(status)
+    )
+} 
