@@ -71,4 +71,5 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     implementation("io.socket:socket.io-client:2.0.1") { exclude(group = "org.json", module = "json") }
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }

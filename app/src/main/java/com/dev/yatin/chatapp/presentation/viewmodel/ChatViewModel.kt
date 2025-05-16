@@ -89,7 +89,11 @@ class ChatViewModel @Inject constructor(
     }
 
     fun setConnectivity(isConnected: Boolean) {
+        val wasDisconnected = !_uiState.value.isConnected
         _uiState.value = _uiState.value.copy(isConnected = isConnected)
+        if (isConnected && wasDisconnected) {
+            retryQueuedMessages()
+        }
     }
 
     fun clearError() {

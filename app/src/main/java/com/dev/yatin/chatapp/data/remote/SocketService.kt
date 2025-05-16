@@ -3,14 +3,18 @@ package com.dev.yatin.chatapp.data.remote
 import android.util.Log
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import io.socket.client.IO
-import io.socket.client.Socket
-import io.socket.engineio.client.EngineIOException
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
+import okhttp3.Response
+import okio.ByteString
 import org.json.JSONObject
 
 class SocketService(serverUrl: String) {
-    private val socket: Socket = IO.socket(serverUrl)
-    private val _messageFlow = MutableSharedFlow<JSONObject>()
+    private val client = OkHttpClient()
+    private var webSocket: WebSocket? = null
+    private val _messageFlow = MutableSharedFlow<SocketMessage>()
     val messageFlow = _messageFlow.asSharedFlow()
 
     companion object {
@@ -18,41 +22,47 @@ class SocketService(serverUrl: String) {
     }
 
     init {
-        Log.d(TAG, "Socket: init")
-        socket.on(Socket.EVENT_CONNECT) {
-            // Handle connect
-            Log.d(TAG, "Socket: connected")
-        }
-        socket.on(Socket.EVENT_CONNECT_ERROR) { args ->
-            // Handle socket connection error
-            val error = if (args.isNotEmpty() && args[0] != null) args[0] else null
+        Log.d(TAG, "WebSocket: init")
+        val request = Request.Builder().url(serverUrl).build()
+        webSocket = client.newWebSocket(request, object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: Response) {
+                Log.d(TAG, "WebSocket: connected")
+            }
 
-            when (error) {
-                is EngineIOException -> {
-                    Log.e(TAG, "Socket EngineIO error: ${error.message}")
-                    // Handle specific EngineIO error, e.g., network issues
-                }
-
-                else -> {
-                    val errorMessage = error?.toString() ?: "Unknown error"
-                    Log.e(TAG, "Socket connect error: $errorMessage")
-                    // Handle other types of errors
+            override fun onMessage(webSocket: WebSocket, text: String) {
+                try {
+                    val json = JSONObject(text)
+                    _messageFlow.tryEmit(SocketMessage.Json(json))
+                } catch (e: Exception) {
+                    Log.w(TAG, "WebSocket: Received non-JSON message: $text")
+                    _messageFlow.tryEmit(SocketMessage.Text(text))
                 }
             }
-            // Optionally, inform the user or retry
-        }
-        socket.on("message") { args ->
-            val data = args[0] as JSONObject
-            _messageFlow.tryEmit(data)
-        }
-        socket.connect()
+
+            override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+                // Handle binary messages if needed
+            }
+
+            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                Log.d(TAG, "WebSocket: closing: $code / $reason")
+                webSocket.close(code, reason)
+            }
+
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                Log.d(TAG, "WebSocket: closed: $code / $reason")
+            }
+
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                Log.e(TAG, "WebSocket: error", t)
+            }
+        })
     }
 
     fun sendMessage(message: JSONObject) {
-        socket.emit("message", message)
+        webSocket?.send(message.toString())
     }
 
     fun disconnect() {
-        socket.disconnect()
+        webSocket?.close(1000, "Client disconnect")
     }
 } 

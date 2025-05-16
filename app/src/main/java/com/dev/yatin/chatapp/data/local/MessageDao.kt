@@ -20,4 +20,7 @@ interface MessageDao {
 
     @Query("SELECT * FROM messages WHERE status = :status")
     suspend fun getMessagesByStatus(status: String): List<MessageEntity>
+
+    @Query("SELECT * FROM messages WHERE chatId = :chatId ORDER BY timestamp ASC")
+    fun getMessagesForChat(chatId: String): kotlinx.coroutines.flow.Flow<List<MessageEntity>>
 } 

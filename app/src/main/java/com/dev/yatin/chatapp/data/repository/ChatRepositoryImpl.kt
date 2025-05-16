@@ -26,16 +26,27 @@ class ChatRepositoryImpl(
 
     init {
         CoroutineScope(Dispatchers.IO).launch {
-            socketService.messageFlow.collect { json ->
-                val message = jsonToMessage(json)
-                messagesFlow.update { map ->
-                    val list = map[message.chatId].orEmpty() + message
-                    map + (message.chatId to list)
-                }
-                chatsFlow.update { list ->
-                    val chat = Chat(message.chatId, message.text, message.timestamp)
-                    val filtered = list.filterNot { it.id == chat.id }
-                    (filtered + chat).sortedByDescending { it.timestamp }
+            socketService.messageFlow.collect { socketMsg ->
+                when (socketMsg) {
+                    is com.dev.yatin.chatapp.data.remote.SocketMessage.Json -> {
+                        val message = jsonToMessage(socketMsg.json)
+                        // Insert received message into the database
+                        messageDao.insertMessage(message.toEntity(MessageStatus.SENT))
+                        // (Optional) You can keep the in-memory update for chatsFlow if needed
+                        messagesFlow.update { map ->
+                            val list = map[message.chatId].orEmpty() + message
+                            map + (message.chatId to list)
+                        }
+                        chatsFlow.update { list ->
+                            val chat = Chat(message.chatId, message.text, message.timestamp)
+                            val filtered = list.filterNot { it.id == chat.id }
+                            (filtered + chat).sortedByDescending { it.timestamp }
+                        }
+                    }
+                    is com.dev.yatin.chatapp.data.remote.SocketMessage.Text -> {
+                        // Optionally log or handle plain text messages
+                        // Log.d("ChatRepositoryImpl", "Received plain text: ${socketMsg.text}")
+                    }
                 }
             }
         }
@@ -44,7 +55,7 @@ class ChatRepositoryImpl(
     override fun getChats(): Flow<List<Chat>> = chatsFlow.asStateFlow()
 
     override fun getMessages(chatId: String): Flow<List<Message>> =
-        messagesFlow.asStateFlow().map { it[chatId].orEmpty() }
+        messageDao.getMessagesForChat(chatId).map { list -> list.map { it.toDomain() } }
 
     override suspend fun sendMessage(message: Message): Boolean {
         return try {
