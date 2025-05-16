@@ -14,6 +14,9 @@ import okhttp3.Response
 import okio.ByteString
 import org.json.JSONObject
 
+/*
+Expected server side response :- {"id":"1","chatId":"1","text":"Message","sender":"Server"}
+*/
 class SocketService(serverUrl: String) {
     private val client = OkHttpClient()
     private var webSocket: WebSocket? = null
