@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import com.dev.yatin.chatapp.domain.model.Chat
 import com.dev.yatin.chatapp.domain.model.Message
@@ -49,7 +50,9 @@ fun ChatScreen(viewModel: ChatViewModel = hiltViewModel()) {
         OfflineBanner(isConnected = uiState.isConnected)
         Row(Modifier.weight(1f)) {
             if (uiState.emptyChats) {
-                EmptyChatsView(Modifier.weight(1f).fillMaxHeight())
+                EmptyChatsView(Modifier
+                    .weight(1f)
+                    .fillMaxHeight())
             } else {
                 ChatList(
                     chats = uiState.chats,
@@ -57,7 +60,9 @@ fun ChatScreen(viewModel: ChatViewModel = hiltViewModel()) {
                         selectedChatId = chat.id
                         viewModel.loadMessages(chat)
                     },
-                    modifier = Modifier.weight(1f).fillMaxHeight()
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
                 )
             }
             selectedChatId?.let { chatId ->
@@ -69,7 +74,10 @@ fun ChatScreen(viewModel: ChatViewModel = hiltViewModel()) {
                     },
                     messageText = messageText,
                     onMessageTextChange = { messageText = it },
-                    modifier = Modifier.weight(2f).fillMaxHeight().padding(8.dp)
+                    modifier = Modifier
+                        .weight(2f)
+                        .fillMaxHeight()
+                        .padding(8.dp)
                 )
             }
         }
@@ -100,13 +108,13 @@ fun EmptyChatsView(modifier: Modifier = Modifier) {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.Send,
-                contentDescription = "No chats",
-                tint = Color.Gray,
-                modifier = Modifier.size(64.dp)
+                painter = painterResource(id = com.dev.yatin.chatapp.R.drawable.empty),
+                contentDescription = "Empty",
+                tint = Color.Unspecified,
+                modifier = Modifier.size(200.dp)
             )
             Spacer(Modifier.height(8.dp))
-            Text("No chats available", color = Color.Gray)
+            Text("No chats available", color = Color.Gray,fontSize = 16.sp)
         }
     }
 }
@@ -133,7 +141,9 @@ fun ChatListItem(chat: Chat, onClick: () -> Unit) {
                 imageVector = Icons.Default.Person,
                 contentDescription = "User Icon",
                 tint = Color.Gray,
-                modifier = Modifier.size(40.dp).clip(CircleShape)
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
             )
         },
         headlineContent = { Text(chat.lastMessage, maxLines = 1) },
@@ -172,10 +182,10 @@ fun EmptyMessagesView(modifier: Modifier = Modifier) {
     Box(modifier, contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.Send,
-                contentDescription = "No messages",
-                tint = Color.Gray,
-                modifier = Modifier.size(48.dp)
+                painter = painterResource(id = com.dev.yatin.chatapp.R.drawable.empty),
+                contentDescription = "Empty",
+                tint = Color.Unspecified,
+                modifier = Modifier.size(200.dp)
             )
             Spacer(Modifier.height(8.dp))
             Text("No messages yet", color = Color.Gray)
@@ -205,7 +215,10 @@ fun MessageBubble(msg: Message) {
                 imageVector = Icons.Default.Person,
                 contentDescription = "User Icon",
                 tint = Color(0xFF90CAF9),
-                modifier = Modifier.size(32.dp).clip(CircleShape).align(Alignment.Bottom)
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .align(Alignment.Bottom)
             )
             Spacer(Modifier.width(4.dp))
         }
@@ -238,7 +251,10 @@ fun MessageBubble(msg: Message) {
                 imageVector = Icons.Default.Person,
                 contentDescription = "User Icon",
                 tint = Color(0xFF81C784),
-                modifier = Modifier.size(32.dp).clip(CircleShape).align(Alignment.Bottom)
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .align(Alignment.Bottom)
             )
         }
     }
@@ -261,7 +277,9 @@ fun MessageInputBar(
         TextField(
             value = messageText,
             onValueChange = onMessageTextChange,
-            modifier = Modifier.weight(1f).background(Color.Transparent),
+            modifier = Modifier
+                .weight(1f)
+                .background(Color.Transparent),
             placeholder = { Text("Type a message...") },
             colors = TextFieldDefaults.colors(
                 unfocusedContainerColor = Color.Transparent,
