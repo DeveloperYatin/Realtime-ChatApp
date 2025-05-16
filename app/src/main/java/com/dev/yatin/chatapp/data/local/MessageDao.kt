@@ -23,4 +23,7 @@ interface MessageDao {
 
     @Query("SELECT * FROM messages WHERE chatId = :chatId ORDER BY timestamp ASC")
     fun getMessagesForChat(chatId: String): kotlinx.coroutines.flow.Flow<List<MessageEntity>>
+
+    @Query("SELECT * FROM messages WHERE timestamp IN (SELECT MAX(timestamp) FROM messages GROUP BY chatId) ORDER BY timestamp DESC")
+    fun getLatestMessagesForChats(): kotlinx.coroutines.flow.Flow<List<MessageEntity>>
 } 

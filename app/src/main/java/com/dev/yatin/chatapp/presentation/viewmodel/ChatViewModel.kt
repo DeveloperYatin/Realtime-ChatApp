@@ -48,11 +48,11 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun loadMessages(chatId: String) {
-        currentChatId = chatId
+    fun loadMessages(chat: Chat) {
+        currentChatId = chat.id
         // In a real app, use a use case for getMessages(chatId)
         // For this example, just clear and simulate
-        _uiState.value = _uiState.value.copy(messages = emptyList())
+        _uiState.value = _uiState.value.copy(messages = listOf(Message(chat.id, chat.id, chat.lastMessage, "Sender", System.currentTimeMillis(), MessageStatus.SENT)))
     }
 
     fun sendMessage(text: String, sender: String) {
@@ -65,9 +65,11 @@ class ChatViewModel @Inject constructor(
             timestamp = System.currentTimeMillis(),
             status = MessageStatus.SENT
         )
+        _uiState.value = _uiState.value.copy(messages = _uiState.value.messages + message)
         viewModelScope.launch {
             val success = try {
                 sendMessageUseCase(message)
+                
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(errorMessage = "Failed to send message: ${e.localizedMessage}")
                 false

@@ -1,6 +1,9 @@
 package com.dev.yatin.chatapp.data.remote
 
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import okhttp3.OkHttpClient
@@ -30,12 +33,15 @@ class SocketService(serverUrl: String) {
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
-                try {
-                    val json = JSONObject(text)
-                    _messageFlow.tryEmit(SocketMessage.Json(json))
-                } catch (e: Exception) {
-                    Log.w(TAG, "WebSocket: Received non-JSON message: $text")
-                    _messageFlow.tryEmit(SocketMessage.Text(text))
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val json = JSONObject(text)
+                        Log.d(TAG, "WebSocket: Emitting JSON message: $text")
+                        _messageFlow.emit(SocketMessage.Json(json))
+                    } catch (e: Exception) {
+                        Log.w(TAG, "WebSocket: Emitting plain text message: $text")
+                        _messageFlow.emit(SocketMessage.Text(text))
+                    }
                 }
             }
 

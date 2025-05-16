@@ -7,6 +7,7 @@ import com.dev.yatin.chatapp.domain.repository.ChatRepository
 import com.dev.yatin.chatapp.data.remote.SocketService
 import com.dev.yatin.chatapp.data.local.MessageDao
 import com.dev.yatin.chatapp.data.local.entity.MessageEntity
+import com.dev.yatin.chatapp.data.remote.SocketMessage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,6 +17,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import java.util.Date
+import java.util.UUID
 
 class ChatRepositoryImpl(
     private val socketService: SocketService,
@@ -25,10 +28,20 @@ class ChatRepositoryImpl(
     private val messagesFlow = MutableStateFlow<Map<String, List<Message>>>(emptyMap())
 
     init {
+        // Fill chatsFlow from local DB
+        CoroutineScope(Dispatchers.IO).launch {
+            messageDao.getLatestMessagesForChats().collect { entities ->
+                val chats = entities.map { entity ->
+                    Chat(entity.chatId, entity.text, entity.timestamp)
+                }.sortedByDescending { it.timestamp }
+                chatsFlow.value = chats
+            }
+        }
+        // Collect socket messages
         CoroutineScope(Dispatchers.IO).launch {
             socketService.messageFlow.collect { socketMsg ->
                 when (socketMsg) {
-                    is com.dev.yatin.chatapp.data.remote.SocketMessage.Json -> {
+                    is SocketMessage.Json -> {
                         val message = jsonToMessage(socketMsg.json)
                         // Insert received message into the database
                         messageDao.insertMessage(message.toEntity(MessageStatus.SENT))
@@ -43,8 +56,21 @@ class ChatRepositoryImpl(
                             (filtered + chat).sortedByDescending { it.timestamp }
                         }
                     }
-                    is com.dev.yatin.chatapp.data.remote.SocketMessage.Text -> {
+                    is SocketMessage.Text -> {
                         // Optionally log or handle plain text messages
+                        val message = textToMessage(socketMsg.text)
+                        // Insert received message into the database
+                        messageDao.insertMessage(message.toEntity(MessageStatus.SENT))
+                        // (Optional) You can keep the in-memory update for chatsFlow if needed
+                        messagesFlow.update { map ->
+                            val list = map[message.chatId].orEmpty() + message
+                            map + (message.chatId to list)
+                        }
+                        chatsFlow.update { list ->
+                            val chat = Chat(message.chatId, message.text, message.timestamp)
+                            val filtered = list.filterNot { it.id == chat.id }
+                            (filtered + chat).sortedByDescending { it.timestamp }
+                        }
                         // Log.d("ChatRepositoryImpl", "Received plain text: ${socketMsg.text}")
                     }
                 }
@@ -96,6 +122,15 @@ class ChatRepositoryImpl(
         text = json.getString("text"),
         sender = json.getString("sender"),
         timestamp = json.getLong("timestamp"),
+        status = MessageStatus.SENT
+    )
+
+    private fun textToMessage(text: String): Message = Message(
+        id = UUID.randomUUID().toString(),
+        chatId = UUID.randomUUID().toString(),
+        text = text,
+        sender = "Server", // can change with sender name when needed
+        timestamp = Date().time,
         status = MessageStatus.SENT
     )
 
