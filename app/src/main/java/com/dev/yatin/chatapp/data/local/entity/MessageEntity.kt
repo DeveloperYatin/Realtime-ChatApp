@@ -3,9 +3,9 @@ package com.dev.yatin.chatapp.data.local.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "messages")
+@Entity(tableName = "messages",primaryKeys = [ "id","chatId"])
 data class MessageEntity(
-    @PrimaryKey val id: String,
+    val id: String,
     val chatId: String,
     val text: String,
     val sender: String,
