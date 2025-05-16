@@ -122,7 +122,7 @@ class ChatRepositoryImpl(
         chatId = json.getString("chatId"),
         text = json.getString("text"),
         sender = json.getString("sender"),
-        timestamp = json.getLong("timestamp"),
+        timestamp = Date().time,
         status = MessageStatus.SENT
     )
 
