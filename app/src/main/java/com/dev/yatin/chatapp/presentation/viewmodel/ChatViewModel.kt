@@ -42,7 +42,7 @@ class ChatViewModel @Inject constructor(
             getChatsUseCase().collectLatest { chats ->
                 _uiState.value = _uiState.value.copy(
                     chats = chats,
-                    emptyChats = chats.isEmpty()
+                    emptyChats = chats.isEmpty(),
                 )
             }
         }
@@ -51,8 +51,11 @@ class ChatViewModel @Inject constructor(
     fun loadMessages(chat: Chat) {
         currentChatId = chat.id
         // In a real app, use a use case for getMessages(chatId)
-        // For this example, just clear and simulate
-        _uiState.value = _uiState.value.copy(messages = listOf(Message(chat.id, chat.id, chat.lastMessage, "Sender", System.currentTimeMillis(), MessageStatus.SENT)))
+        viewModelScope.launch {
+            getChatsUseCase.getMessages(chat.id).collectLatest {
+                _uiState.value = _uiState.value.copy(messages = it)
+            }
+        }
     }
 
     fun sendMessage(text: String, sender: String) {

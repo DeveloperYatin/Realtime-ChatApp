@@ -89,7 +89,7 @@ fun ChatScreen(viewModel: ChatViewModel = hiltViewModel()) {
                                 )
                             },
                             headlineContent = { Text(chat.lastMessage, maxLines = 1) },
-                            supportingContent = { Text("${chat.timestamp}") },
+                            supportingContent = { Text(chat.timestamp) },
                             modifier = Modifier.clickable {
                                 selectedChatId = chat.id
                                 viewModel.loadMessages(chat)
@@ -122,7 +122,7 @@ fun ChatScreen(viewModel: ChatViewModel = hiltViewModel()) {
                     } else {
                         LazyColumn(modifier = Modifier.weight(1f)) {
                             items(messages) { msg ->
-                                val isServer = msg.sender.equals("server", ignoreCase = true)
+                                val isServer = msg.sender.equals("Server", ignoreCase = true)
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = if (isServer) Arrangement.End else Arrangement.Start

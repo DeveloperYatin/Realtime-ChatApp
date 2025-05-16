@@ -17,7 +17,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 import java.util.UUID
 
 class ChatRepositoryImpl(
@@ -27,12 +29,14 @@ class ChatRepositoryImpl(
     private val chatsFlow = MutableStateFlow<List<Chat>>(emptyList())
     private val messagesFlow = MutableStateFlow<Map<String, List<Message>>>(emptyMap())
 
+    val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm:ss", Locale.getDefault())
+
     init {
         // Fill chatsFlow from local DB
         CoroutineScope(Dispatchers.IO).launch {
             messageDao.getLatestMessagesForChats().collect { entities ->
                 val chats = entities.map { entity ->
-                    Chat(entity.chatId, entity.text, entity.timestamp)
+                    Chat(entity.chatId, entity.text, dateFormat.format(Date(entity.timestamp)))
                 }.sortedByDescending { it.timestamp }
                 chatsFlow.value = chats
             }
@@ -51,23 +55,20 @@ class ChatRepositoryImpl(
                             map + (message.chatId to list)
                         }
                         chatsFlow.update { list ->
-                            val chat = Chat(message.chatId, message.text, message.timestamp)
+                            val chat = Chat(message.chatId, message.text, dateFormat.format(Date(message.timestamp)))
                             val filtered = list.filterNot { it.id == chat.id }
                             (filtered + chat).sortedByDescending { it.timestamp }
                         }
                     }
                     is SocketMessage.Text -> {
-                        // Optionally log or handle plain text messages
                         val message = textToMessage(socketMsg.text)
-                        // Insert received message into the database
                         messageDao.insertMessage(message.toEntity(MessageStatus.SENT))
-                        // (Optional) You can keep the in-memory update for chatsFlow if needed
                         messagesFlow.update { map ->
                             val list = map[message.chatId].orEmpty() + message
                             map + (message.chatId to list)
                         }
                         chatsFlow.update { list ->
-                            val chat = Chat(message.chatId, message.text, message.timestamp)
+                            val chat = Chat(message.chatId, message.text, dateFormat.format(Date(message.timestamp)))
                             val filtered = list.filterNot { it.id == chat.id }
                             (filtered + chat).sortedByDescending { it.timestamp }
                         }
@@ -139,7 +140,7 @@ class ChatRepositoryImpl(
         chatId = chatId,
         text = text,
         sender = sender,
-        timestamp = timestamp,
+        timestamp = Date().time,
         status = status.name
     )
 
