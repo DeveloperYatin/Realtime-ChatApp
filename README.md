@@ -10,13 +10,47 @@ A single-screen mobile chat application built with Jetpack Compose, Clean Archit
 - SOLID principles
 
 ## Architecture
+
 ```
 app/
   └── src/main/java/com/dev/yatin/chatapp/
-      ├── data/        # Room, Socket, RepositoryImpl
-      ├── domain/      # Models, Repository interfaces, UseCases
-      ├── di/          # Hilt DI
-      └── presentation/# ViewModel, Compose UI
+      ├── MainActivity.kt
+      ├── ChatApp.kt
+      ├── data/                # Data layer: local DB, remote socket, repository implementation
+      │   ├── local/
+      │   │   ├── AppDatabase.kt
+      │   │   ├── MessageDao.kt
+      │   │   └── entity/
+      │   │       └── MessageEntity.kt
+      │   ├── remote/
+      │   │   ├── SocketService.kt
+      │   │   └── SocketMessage.kt
+      │   └── repository/
+      │       └── ChatRepositoryImpl.kt
+      ├── domain/              # Domain layer: models, repository interfaces, use cases
+      │   ├── model/
+      │   │   ├── Chat.kt
+      │   │   └── Message.kt
+      │   ├── repository/
+      │   │   └── ChatRepository.kt
+      │   └── usecase/
+      │       ├── GetChatsUseCase.kt
+      │       ├── RetryQueuedMessagesUseCase.kt
+      │       └── SendMessageUseCase.kt
+      ├── di/                  # Dependency injection (Hilt modules)
+      │   └── AppModule.kt
+      ├── presentation/        # Presentation layer: ViewModel, Compose UI
+      │   ├── ui/
+      │   │   └── ChatScreen.kt
+      │   └── viewmodel/
+      │       └── ChatViewModel.kt
+      ├── util/                # Utilities
+      │   └── ConnectivityObserver.kt
+      └── ui/                  # UI theme
+          └── theme/
+              ├── Color.kt
+              ├── Theme.kt
+              └── Type.kt
 ```
 
 ## Setup
@@ -43,4 +77,4 @@ app/
 
 ---
 
-**Author:** [Your Name] 
+**Author:** [DeveloperYatin] 
